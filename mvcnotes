@@ -1,0 +1,173 @@
+Building Web APIs 
+RESTful Convention
+
+
+Request 									Description
+GET    /api/customers 					Get all customers
+GET    /api/customers/1 				Get customer with ID 1
+POST   /api/customers 					Add a new customer (customer data in the request body)
+PUT    /api/customers/1 				Update customer with ID 1 (customer data in the request body)
+DELETE /api/customers/1 				Delete customer with ID 1
+
+
+
+Building an API 
+
+public	IHttpActionResult	GetCustomers()	{}	
+
+[HttpPost]
+public	IHttpActionResult	CreateCustomer(CustomerDto	customer)	{}	
+
+[HttpPut]
+public	IHttpActionResult	UpdateCustomer(int	id,	CustomerDto	customer)	{}
+
+[HttpDelete]
+public	IHttpActionResult	DeleteCustomer(int	id)	{}	
+
+
+Helper methods
+• NotFound()
+• Ok()
+• Created()
+• Unauthorized()
+
+
+AutoMapper
+
+1) install-package automapper -version 4.1
+2) Create a mapping profile first:
+		public	class	MappingProfile	:	Profile	
+		{
+			public	MappingProfile()
+			{
+				Mapper.CreateMap<Customer,	CustomerDto>();
+			}
+		}	
+3) Load the mapping profile during application startup (in global.asax.cs):
+		protected	void	Application_Start()
+		{
+			Mapper.Initialize(c	=>	c.AddProfile<MappingProfile>());
+		}	
+
+To map objects:
+
+var	customerDto	=	Mapper.Map<Customer,CustomerDto>(customer);	
+
+Or to map to an existing object:
+
+Mapper.Map(customer,customerDto);	
+
+Enabling camel casing
+
+In WebApiConfig:
+
+public	static	void	Register(HttpConfiguration	config)
+{
+	var	settings	=	config.Formatters.JsonFormatter.SerializerSettings;
+	settings.ContractResolver	=	new	CamelCasePropertyNamesContractResolver();
+	settings.Formatting	=	Formatting.Indented;
+}
+
+
+
+
+
+
+
+Working Of Open authorization (OAuth)
+
+
+	         MVC                                   Facebook
+
+
+
+ Assume John wants to log on to MVC application using Facebook.
+
+ 1) First register MVC application with Facebook to create some kind of partnership.
+ 2) Facebook will give an API key and secret (kind off un and password)
+    These details can be used for communicating with facebook under the hood
+ 3) John wants to login using facebook, When he clicks on facebook , he is redirected to facebook page
+ 4) We will use our api key and secret while he is redirecting to facebook page.
+ 5) Facebook in this case will know that the request is coming from Vidly application. 
+ 6) To prevent a malicious user from finding our secret, we use https protocol so that the data 
+    exchange between this 2 parties will be encrypted and no one can intercept this communication.
+ 7) John now is on facebook and logs in with his user name and password. On vidly, we dont know and dont care 
+    what his facebook credentials are.
+ 8) When he logs into facebook, facebook will tell him that vidly wants to acess some basic info abt his account.
+ 9) Since vidly is registered with facebook at the beginning, facebook knows the address of vidly
+	and hence John will be redirected to Vidly along with an authorization token.
+ 10)The auth token means that the facebook application has succesfully  authorized John on facebook.
+ 11) Vidly when recieves the auth token will send it back to facebook with auth token, key and secret. We do this cz
+     a hacker might send malicious auth token to vidly. Hence we make sure that the auth token sent to Vidly is
+	 from facebook.
+ 12) Facebook then sends an access token. With this access token, we can access some part ofJohn's profile.
+     The parts where we have permission to access. 
+
+
+
+	 Right Click on the project in soln explorer and press  FN + F4  to enable ssl 
+
+
+	 To enable  social run the command in the package manager console
+	 	 Install-Package Microsoft.Owin.Security.Facebook
+
+
+Authentication/Authorization
+
+ASP.NET Identity Classes
+
+• API: UserManager, RoleManager, SignInManager
+• Domain: IdentityUser, IdentityRole
+• Persistence: UserStore, RoleStore
+
+
+Restricting Access
+Declaratively
+
+[Authorize]: apply to an action, a controller or globally (in FilterConfig).
+[Authorize(Roles = “CanManageMovies”)]
+
+
+Programatically
+In an action:
+if	(User.Identity.IsAuthenticated)	{	…	}	
+if	(User.IsInRole(“CanManageMovies”)	{	…	}	
+
+
+
+Seeding Users and Roles
+
+1) Populate your database with the default user(s) and role(s).
+2) Create an empty migration.
+3) Script the data in existing users and roles tables and add them to the migration.
+4) Remove the records from your database.
+5) Run the migration.
+6) Assigning a User to a Role
+		var	roleStore	=	new	RoleStore<IdentityRole>(new	ApplicationDbContext());
+		var	roleManager	=	new	RoleManager<IdentityRole>(roleStore);	
+		await	roleManager.CreateAsync(new	IdentityRole(“CanManageMovies”));																							
+		await	UserManager.AddToRoleAsync(user.Id,	“CanManageMovies”);	
+
+
+
+Adding Profile Data
+
+
+1) Always start with the domain. Add the new properties to ApplicationUser.
+2) Create a migration and update the database.
+3) Modify the views: Register.cshtml and ExternalLoginConfirmation.cshtml.
+4) When the registration form is posted, set the properties of the ApplicationUser object
+	using view model properties. In AccountController, you need to modify two actions:
+	Register and ExternalLoginConfirmation.
+
+
+Enabling Social Logins
+
+Enable SSL: select the project, F4, set SSL Enabled to true. Copy SSL Url, select the
+project, go to Properties, in the Web tab, set the Startup URL.
+
+Apply RequireSsl filter globally (in FilterConfig).
+
+Register your app with an external authentication provider to get a key/secret. In
+App_Start/Startup.Auth.cs, remove the comment for the corresponding providers and
+add your key/secret.
